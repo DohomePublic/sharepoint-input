@@ -1,11 +1,2 @@
-# Admin KYC SharePoint Form
-
-แบบฟอร์มพร้อมใช้งานสำหรับบันทึกข้อมูลลง SharePoint List `Admin_Kyc`
-
-คอลัมน์:
-- Title
-- Email
-- Full_Name
-- depart
-
-อ่านวิธีติดตั้งใน `docs/INSTALL.md`
+# Admin KYC Form FIX
+แก้ปัญหา `Cannot read properties of undefined (reading 'loginPopup')` โดยรอ MSAL `initialize()` ก่อนเปิดปุ่ม Login/Save
