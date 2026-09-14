@@ -1,2 +1,2 @@
-# Admin KYC Form FIX
-แก้ปัญหา `Cannot read properties of undefined (reading 'loginPopup')` โดยรอ MSAL `initialize()` ก่อนเปิดปุ่ม Login/Save
+# Admin KYC Form Local MSAL
+เวอร์ชันนี้เก็บ MSAL Browser ไว้ใน `assets/msal-browser.min.js` จึงไม่ต้องโหลดจาก `alcdn.msauth.net`
