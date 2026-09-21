@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DOHOME KYC Management System</title>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<style>
+:root{--p:#123b5d;--p2:#1f5d8c;--g:#198754;--r:#b42318;--bg:#f3f6f9;--bd:#d7dee7;--tx:#17212b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Segoe UI,Tahoma,sans-serif;color:var(--tx)}
+header{background:linear-gradient(120deg,var(--p),var(--p2));color:#fff;padding:22px 5%;display:flex;justify-content:space-between;align-items:center;gap:15px;box-shadow:0 4px 16px #0002}header h1{font-size:22px;margin:0}header p{margin:5px 0 0;opacity:.85}.user{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pill{padding:7px 11px;border-radius:999px;background:#ffffff20;font-size:13px}
+main{max-width:1180px;margin:24px auto;padding:0 16px}.notice{display:none;padding:13px 16px;border-radius:10px;margin-bottom:16px}.notice.ok{display:block;background:#e9f7ef;color:#12643a}.notice.err{display:block;background:#fff0ef;color:#8c1d18}.card{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:22px;margin-bottom:18px;box-shadow:0 5px 18px #17324d0d}.card h2{font-size:18px;color:var(--p);margin:0 0 18px;border-bottom:1px solid var(--bd);padding-bottom:11px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.span2{grid-column:span 2}.span3{grid-column:span 3}label{display:block;font-weight:600;font-size:13px;margin-bottom:7px}input,select,textarea{width:100%;border:1px solid #b9c5d2;border-radius:8px;padding:11px 12px;font:inherit;background:#fff}input:focus,select:focus,textarea:focus{outline:3px solid #2878b51f;border-color:#2878b5}.required:after{content:' *';color:var(--r)}.actions{position:sticky;bottom:0;background:#ffffffef;backdrop-filter:blur(8px);border:1px solid var(--bd);border-radius:12px;padding:14px;display:flex;justify-content:flex-end;gap:10px;box-shadow:0 -5px 20px #0001}button{border:0;border-radius:8px;padding:11px 18px;font-weight:700;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.primary{background:var(--p);color:#fff}.success{background:var(--g);color:#fff}.muted{background:#e8edf2;color:#22313f}.small{font-size:12px;color:#667585;margin-top:7px}.loading{display:none}.loading.show{display:inline-block}
+@media(max-width:800px){header{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}.span2,.span3{grid-column:span 1}.actions{flex-wrap:wrap}.actions button{flex:1}}
+</style>
+</head>
+<body>
+<header><div><h1>DOHOME KYC MANAGEMENT SYSTEM</h1><p>Customer Credit Approval Workflow</p></div><div class="user"><span id="accountName" class="pill">ยังไม่ได้เข้าสู่ระบบ</span><button id="loginBtn" class="muted">เข้าสู่ระบบ Microsoft</button><button id="logoutBtn" class="muted" hidden>ออกจากระบบ</button></div></header>
+<main>
+<div id="message" class="notice" role="alert"></div>
+<form id="kycForm">
+<section class="card"><h2>1. ข้อมูลลูกค้า</h2><div class="grid">
+<div><label class="required" for="Customer_id">Customer ID</label><input id="Customer_id" required></div>
+<div><label class="required" for="Registered_Name">ชื่อจดทะเบียน</label><input id="Registered_Name" required></div>
+<div><label class="required" for="Customer_Name">ชื่อลูกค้า</label><input id="Customer_Name" required></div>
+<div><label for="registration_number">เลขทะเบียนนิติบุคคล</label><input id="registration_number" inputmode="numeric"></div>
+<div><label for="business_type">ประเภทธุรกิจ</label><select id="business_type"><option value="">กรุณาเลือก</option><option>รับเหมาก่อสร้าง</option><option>ร้านค้าช่วง</option><option>อสังหาริมทรัพย์</option><option>หน่วยงานราชการ</option><option>อื่นๆ</option></select></div>
+<div><label for="Type_Request">ประเภทคำขอ</label><select id="Type_Request"><option>คำขอเปิดวงเงินลูกค้าใหม่</option><option>คำขอเพิ่มวงเงิน</option></select></div>
+</div></section>
+<section class="card"><h2>2. ที่อยู่และการติดต่อ</h2><div class="grid">
+<div class="span3"><label for="Address">ที่อยู่</label><textarea id="Address" rows="3"></textarea></div>
+<div><label for="province">จังหวัด</label><input id="province"></div><div><label for="district">อำเภอ/เขต</label><input id="district"></div><div><label for="county">ตำบล/แขวง</label><input id="county"></div>
+<div><label for="Postcode">รหัสไปรษณีย์</label><input id="Postcode" inputmode="numeric" maxlength="5"></div><div><label for="contact_name">ชื่อผู้ติดต่อ</label><input id="contact_name"></div><div><label for="contact_number">เบอร์โทรศัพท์</label><input id="contact_number" inputmode="tel"></div>
+</div></section>
+<section class="card"><h2>3. ข้อมูลวงเงิน</h2><div class="grid">
+<div><label for="limit">วงเงินที่ขอ</label><input id="limit" inputmode="decimal" placeholder="เช่น 2,000,000"></div><div><label for="CraditApprove">วงเงินอนุมัติ</label><input id="CraditApprove" inputmode="decimal"></div><div><label for="credit_semester1">เครดิตเทอม</label><select id="credit_semester1"><option>30</option><option>60</option></select></div>
+</div><p class="small">รายการใหม่จะถูกบันทึกด้วยสถานะ Draft และ Request TimeStamp ณ เวลาที่กดส่ง</p></section>
+<div class="actions"><button type="button" class="muted" id="draftBtn">บันทึกแบบร่างในเครื่อง</button><button type="submit" class="success" id="submitBtn" disabled><span id="spinner" class="loading">กำลังส่ง... </span>ส่งเข้า SharePoint</button></div>
+</form></main>
+<script>
+const CONFIG={
+ clientId:'a37bd62d-e74d-4ea0-9546-1eb5aa96f604',
+ tenantId:'7f8918d9-718a-495b-ac9a-17cba381c4a0',
+ sharePointHost:'dohomegroup.sharepoint.com',
+ sitePath:'/sites/AC-Accounting',
+ listName:'DemoApp',
+ scopes:['User.Read','Sites.ReadWrite.All']
+};
+const msalApp=new msal.PublicClientApplication({auth:{clientId:CONFIG.clientId,authority:`https://login.microsoftonline.com/${CONFIG.tenantId}`,redirectUri:location.origin+location.pathname},cache:{cacheLocation:'sessionStorage',storeAuthStateInCookie:false}});
+const $=id=>document.getElementById(id); let account=null;
+function show(msg,type='ok'){const el=$('message');el.textContent=msg;el.className=`notice ${type}`;window.scrollTo({top:0,behavior:'smooth'});} function clearMessage(){$('message').className='notice';}
+async function init(){await msalApp.initialize();const result=await msalApp.handleRedirectPromise();account=result?.account||msalApp.getAllAccounts()[0]||null;renderAccount();restoreDraft();}
+function renderAccount(){const on=!!account;$('accountName').textContent=on?(account.name||account.username):'ยังไม่ได้เข้าสู่ระบบ';$('loginBtn').hidden=on;$('logoutBtn').hidden=!on;$('submitBtn').disabled=!on;}
+async function login(){clearMessage();try{const r=await msalApp.loginPopup({scopes:CONFIG.scopes,prompt:'select_account'});account=r.account;renderAccount();show('เข้าสู่ระบบ Microsoft สำเร็จ');}catch(e){show('เข้าสู่ระบบไม่สำเร็จ: '+(e.message||e),'err');}}
+async function getToken(){try{return (await msalApp.acquireTokenSilent({scopes:CONFIG.scopes,account})).accessToken;}catch(e){return (await msalApp.acquireTokenPopup({scopes:CONFIG.scopes,account})).accessToken;}}
+async function graph(url,options={}){const token=await getToken();const r=await fetch('https://graph.microsoft.com/v1.0'+url,{...options,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json',...(options.headers||{})}});const text=await r.text();let body={};try{body=text?JSON.parse(text):{};}catch{body={raw:text};}if(!r.ok)throw new Error(body?.error?.message||`Graph API ${r.status}`);return body;}
+async function resolveTargets(){const site=await graph(`/sites/${CONFIG.sharePointHost}:${CONFIG.sitePath}`);const lists=await graph(`/sites/${site.id}/lists?$select=id,displayName`);const list=lists.value.find(x=>x.displayName===CONFIG.listName);if(!list)throw new Error(`ไม่พบ SharePoint List ${CONFIG.listName}`);return{siteId:site.id,listId:list.id};}
+function val(id){return $(id).value.trim();}
+function buildFields(){return{Title:val('Registered_Name'),Registered_Name:val('Registered_Name'),Customer_id:val('Customer_id'),'Customer Name':val('Customer_Name'),registration_number:val('registration_number'),business_type:val('business_type'),Type_Request:val('Type_Request'),Address:val('Address'),province:val('province'),district:val('district'),county:val('county'),Postcode:val('Postcode'),contact_name:val('contact_name'),contact_number:val('contact_number'),limit:val('limit'),CraditApprove:val('CraditApprove'),credit_semester1:val('credit_semester1'),Status:'Draft','Request TimeStamp':new Date().toISOString()};}
+async function submitKYC(ev){ev.preventDefault();clearMessage();if(!account)return show('กรุณาเข้าสู่ระบบ Microsoft ก่อน','err');if(!$('kycForm').reportValidity())return;$('submitBtn').disabled=true;$('spinner').classList.add('show');try{const t=await resolveTargets();const created=await graph(`/sites/${t.siteId}/lists/${t.listId}/items`,{method:'POST',body:JSON.stringify({fields:buildFields()})});localStorage.removeItem('dohomeKycDraft');$('kycForm').reset();show(`บันทึก KYC เข้า SharePoint สำเร็จ เลขที่รายการ ${created.id}`);}catch(e){show('บันทึกไม่สำเร็จ: '+(e.message||e),'err');}finally{$('spinner').classList.remove('show');$('submitBtn').disabled=!account;}}
+function saveDraft(){const data={};document.querySelectorAll('#kycForm input,#kycForm select,#kycForm textarea').forEach(x=>data[x.id]=x.value);localStorage.setItem('dohomeKycDraft',JSON.stringify(data));show('บันทึกแบบร่างไว้ในเครื่องแล้ว');}
+function restoreDraft(){try{const d=JSON.parse(localStorage.getItem('dohomeKycDraft')||'{}');Object.entries(d).forEach(([k,v])=>{if($(k))$(k).value=v;});}catch{}}
+$('loginBtn').onclick=login;$('logoutBtn').onclick=()=>msalApp.logoutPopup({account});$('draftBtn').onclick=saveDraft;$('kycForm').onsubmit=submitKYC;init().catch(e=>show('เริ่มระบบไม่สำเร็จ: '+(e.message||e),'err'));
+</script></body></html>
