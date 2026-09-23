@@ -1,0 +1,32 @@
+name: Test SharePoint connection
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - "scripts/test-connection.js"
+      - ".github/workflows/test-connection.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run connection test
+        env:
+          AZ_CLIENT_ID: ${{ secrets.AZ_CLIENT_ID }}
+          AZ_TENANT_ID: ${{ secrets.AZ_TENANT_ID }}
+          AZ_CLIENT_SECRET: ${{ secrets.AZ_CLIENT_SECRET }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          SP_HOSTNAME: ${{ vars.SP_HOSTNAME }}
+          SP_SITE_PATH: ${{ vars.SP_SITE_PATH }}
+          SP_LIST_NAME: ${{ vars.SP_LIST_NAME }}
+        run: node scripts/test-connection.js

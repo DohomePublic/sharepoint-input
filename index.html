@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DOHOME · KYC Input</title>
+<link rel="icon" href="data:," />
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.24.0/lib/msal-browser.min.js"></script>
+<style>
+  :root{
+    --ink:#1c2b22;
+    --paper:#f6f4ee;
+    --line:#d8d2c2;
+    --accent:#1f6f4a;
+    --accent-dark:#154e34;
+    --danger:#a3392b;
+    --muted:#6b6558;
+    font-family: "IBM Plex Sans Thai", "Sarabun", system-ui, -apple-system, sans-serif;
+  }
+  @font-face{
+    font-family:"IBM Plex Sans Thai";
+    src:local("IBM Plex Sans Thai");
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:40px 16px 80px;
+  }
+  .shell{
+    width:100%;
+    max-width:640px;
+  }
+  header.top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:14px;
+    margin-bottom:28px;
+  }
+  header.top .mark{
+    font-size:13px;
+    letter-spacing:.04em;
+    color:var(--muted);
+  }
+  h1{
+    font-size:26px;
+    margin:2px 0 0;
+    font-weight:700;
+  }
+  #account-bar{
+    font-size:13px;
+    color:var(--muted);
+    text-align:right;
+  }
+  #account-bar strong{color:var(--ink);}
+  button{
+    font:inherit;
+    cursor:pointer;
+    border:none;
+    border-radius:3px;
+    padding:10px 18px;
+    font-weight:600;
+  }
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:var(--accent-dark);}
+  .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--ink);}
+  button:disabled{opacity:.5;cursor:not-allowed;}
+
+  #gate{
+    border:1px solid var(--line);
+    background:#fff;
+    padding:32px;
+    text-align:center;
+  }
+  #gate p{color:var(--muted);margin-bottom:20px;line-height:1.6;}
+
+  form{
+    display:none;
+    background:#fff;
+    border:1px solid var(--line);
+  }
+  .field{
+    padding:16px 20px;
+    border-bottom:1px solid var(--line);
+  }
+  .field:last-of-type{border-bottom:none;}
+  label{
+    display:block;
+    font-size:13px;
+    font-weight:600;
+    margin-bottom:6px;
+  }
+  label .req{color:var(--danger);}
+  input, select, textarea{
+    width:100%;
+    font:inherit;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  textarea{min-height:70px;resize:vertical;}
+  input:focus, select:focus, textarea:focus{
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+  }
+  .actions{
+    padding:20px;
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+  }
+  #status{
+    margin-top:18px;
+    padding:12px 16px;
+    border-radius:2px;
+    font-size:14px;
+    display:none;
+    line-height:1.6;
+  }
+  #status.ok{display:block;background:#e4f0e8;border:1px solid var(--accent);color:var(--accent-dark);}
+  #status.err{display:block;background:#f6e6e2;border:1px solid var(--danger);color:var(--danger);}
+  #status.pending{display:block;background:#fff;border:1px solid var(--line);color:var(--muted);}
+  footer{
+    margin-top:40px;
+    font-size:12px;
+    color:var(--muted);
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <div>
+      <div class="mark">DOHOME · Accounting</div>
+      <h1>บันทึกข้อมูล KYC เข้า SharePoint</h1>
+    </div>
+    <div id="account-bar"></div>
+  </header>
+
+  <div id="gate">
+    <p>เข้าสู่ระบบด้วยบัญชี Microsoft ขององค์กร เพื่อบันทึกข้อมูลลงลิสต์ SharePoint โดยตรง</p>
+    <button id="login-btn" class="btn-primary">เข้าสู่ระบบด้วย Microsoft</button>
+  </div>
+
+  <form id="kyc-form" autocomplete="off">
+    <div class="field">
+      <label for="fullName">ชื่อ-นามสกุล / ชื่อนิติบุคคล <span class="req">*</span></label>
+      <input id="fullName" required />
+    </div>
+    <div class="field">
+      <label for="customerType">ประเภทลูกค้า <span class="req">*</span></label>
+      <select id="customerType" required>
+        <option value="">-- เลือก --</option>
+        <option value="บุคคลธรรมดา">บุคคลธรรมดา</option>
+        <option value="นิติบุคคล">นิติบุคคล</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="idNumber">เลขบัตรประชาชน / เลขทะเบียนนิติบุคคล <span class="req">*</span></label>
+      <input id="idNumber" required pattern="[0-9]{10,13}" title="กรอกเฉพาะตัวเลข 10-13 หลัก" />
+    </div>
+    <div class="field">
+      <label for="address">ที่อยู่</label>
+      <textarea id="address"></textarea>
+    </div>
+    <div class="field">
+      <label for="phone">เบอร์โทรศัพท์</label>
+      <input id="phone" type="tel" />
+    </div>
+    <div class="field">
+      <label for="email">อีเมล</label>
+      <input id="email" type="email" />
+    </div>
+    <div class="field">
+      <label for="notes">หมายเหตุ</label>
+      <textarea id="notes"></textarea>
+    </div>
+    <div class="actions">
+      <button type="button" id="logout-btn" class="btn-ghost">ออกจากระบบ</button>
+      <button type="submit" id="submit-btn" class="btn-primary">บันทึกเข้า SharePoint</button>
+    </div>
+  </form>
+
+  <div id="status"></div>
+
+  <footer>เชื่อมต่อไปยัง <span id="target-site"></span> · List: <span id="target-list"></span></footer>
+</div>
+
+<script>
+const cfg = window.KYC_CONFIG;
+document.getElementById("target-site").textContent = cfg.spHostname + cfg.spSitePath;
+document.getElementById("target-list").textContent = cfg.spListName;
+
+const msalInstance = new msal.PublicClientApplication({
+  auth: {
+    clientId: cfg.clientId,
+    authority: `https://login.microsoftonline.com/${cfg.tenantId}`,
+    redirectUri: cfg.redirectUri,
+  },
+  cache: { cacheLocation: "sessionStorage" },
+});
+
+const gate = document.getElementById("gate");
+const form = document.getElementById("kyc-form");
+const statusBox = document.getElementById("status");
+const accountBar = document.getElementById("account-bar");
+
+let siteId = null;
+let listId = null;
+
+function setStatus(kind, html) {
+  statusBox.className = kind;
+  statusBox.innerHTML = html;
+}
+
+async function init() {
+  await msalInstance.initialize();
+  const result = await msalInstance.handleRedirectPromise().catch((e) => {
+    setStatus("err", "เข้าสู่ระบบไม่สำเร็จ: " + e.message);
+    return null;
+  });
+  const accounts = msalInstance.getAllAccounts();
+  if (accounts.length > 0) {
+    msalInstance.setActiveAccount(accounts[0]);
+    showLoggedIn(accounts[0]);
+  }
+}
+
+function showLoggedIn(account) {
+  gate.style.display = "none";
+  form.style.display = "block";
+  accountBar.innerHTML = `เข้าสู่ระบบเป็น<br><strong>${account.username}</strong>`;
+}
+
+document.getElementById("login-btn").addEventListener("click", () => {
+  msalInstance.loginRedirect({ scopes: cfg.scopes });
+});
+
+document.getElementById("logout-btn").addEventListener("click", () => {
+  msalInstance.logoutRedirect();
+});
+
+async function getToken() {
+  const account = msalInstance.getActiveAccount();
+  try {
+    const r = await msalInstance.acquireTokenSilent({ scopes: cfg.scopes, account });
+    return r.accessToken;
+  } catch (e) {
+    const r = await msalInstance.acquireTokenPopup({ scopes: cfg.scopes });
+    return r.accessToken;
+  }
+}
+
+async function graphGet(url, token) {
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`Graph GET ${url} -> ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+// ค้นหา site id และ list id ครั้งแรกแล้ว cache ไว้ใน sessionStorage เพื่อไม่ต้องยิงซ้ำทุกครั้ง
+async function resolveSiteAndList(token) {
+  const cached = sessionStorage.getItem("kyc_site_list");
+  if (cached) {
+    const parsed = JSON.parse(cached);
+    siteId = parsed.siteId;
+    listId = parsed.listId;
+    return;
+  }
+  const site = await graphGet(
+    `https://graph.microsoft.com/v1.0/sites/${cfg.spHostname}:${cfg.spSitePath}`,
+    token
+  );
+  siteId = site.id;
+
+  const lists = await graphGet(
+    `https://graph.microsoft.com/v1.0/sites/${siteId}/lists?$filter=displayName eq '${encodeURIComponent(
+      cfg.spListName
+    )}'`,
+    token
+  );
+  if (!lists.value || lists.value.length === 0) {
+    throw new Error(`ไม่พบ List ชื่อ "${cfg.spListName}" ใน site นี้ — ตรวจสอบ spListName ใน config.js`);
+  }
+  listId = lists.value[0].id;
+
+  sessionStorage.setItem("kyc_site_list", JSON.stringify({ siteId, listId }));
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const submitBtn = document.getElementById("submit-btn");
+  submitBtn.disabled = true;
+  setStatus("pending", "กำลังบันทึกข้อมูล...");
+
+  const values = {
+    fullName: document.getElementById("fullName").value.trim(),
+    customerType: document.getElementById("customerType").value,
+    idNumber: document.getElementById("idNumber").value.trim(),
+    address: document.getElementById("address").value.trim(),
+    phone: document.getElementById("phone").value.trim(),
+    email: document.getElementById("email").value.trim(),
+    notes: document.getElementById("notes").value.trim(),
+  };
+
+  try {
+    const token = await getToken();
+    await resolveSiteAndList(token);
+
+    const fields = {};
+    for (const [formKey, spColumn] of Object.entries(cfg.fieldMapping)) {
+      if (values[formKey] !== "") fields[spColumn] = values[formKey];
+    }
+
+    const res = await fetch(
+      `https://graph.microsoft.com/v1.0/sites/${siteId}/lists/${listId}/items`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fields }),
+      }
+    );
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`บันทึกไม่สำเร็จ (HTTP ${res.status}): ${body}`);
+    }
+
+    const created = await res.json();
+    setStatus(
+      "ok",
+      `บันทึกสำเร็จ · Item ID ${created.id}<br>ตรวจสอบข้อมูลได้ที่ List "${cfg.spListName}"`
+    );
+    form.reset();
+  } catch (err) {
+    console.error(err);
+    setStatus("err", "เกิดข้อผิดพลาด: " + err.message);
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
+
+init();
+</script>
+</body>
+</html>
