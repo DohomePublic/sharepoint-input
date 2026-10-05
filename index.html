@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เพิ่มข้อมูล — SharePoint DemoApp</title>
+<style>
+ :root { --dh:#e4002b; --bg:#f4f6f8; --line:#d8dee4; --ink:#16202a; }
+ * { box-sizing:border-box; }
+ body { margin:0; background:var(--bg); color:var(--ink);
+        font-family:"Segoe UI",system-ui,-apple-system,"Noto Sans Thai",sans-serif; }
+ header { background:var(--dh); color:#fff; padding:18px 24px; }
+ header h1 { margin:0; font-size:19px; }
+ header p { margin:6px 0 0; font-size:13px; opacity:.93; }
+ .wrap { max-width:1000px; margin:22px auto; padding:0 16px 48px; }
+ .card { background:#fff; border:1px solid var(--line); border-radius:10px;
+         padding:22px; margin-bottom:18px; }
+ .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:14px; }
+ .field { display:flex; flex-direction:column; }
+ label { font-size:13px; font-weight:600; margin-bottom:5px; }
+ input,select { padding:9px 10px; border:1px solid var(--line); border-radius:6px;
+                font-size:14px; background:#fff; font-family:inherit; color:inherit; }
+ input:focus,select:focus { outline:2px solid var(--dh); outline-offset:-1px; }
+ small { color:#5b6b7b; font-size:12px; margin-top:4px; }
+ .req { color:var(--dh); }
+ .actions { margin-top:20px; display:flex; gap:10px; flex-wrap:wrap; }
+ button { background:var(--dh); color:#fff; border:0; border-radius:6px;
+          padding:11px 22px; font-size:14px; font-weight:600; cursor:pointer;
+          font-family:inherit; }
+ button.sec { background:#5b6b7b; }
+ button:disabled { opacity:.55; cursor:not-allowed; }
+ .badge { display:inline-block; padding:3px 10px; border-radius:11px;
+          font-size:12px; font-weight:600; }
+ .ok { background:#d8f5e0; color:#116b33; }
+ .warn { background:#fff3cd; color:#8a6100; }
+ .err { background:#fde2e4; color:#9b1c25; }
+ .msg { padding:12px 14px; border-radius:7px; margin-bottom:16px; font-size:14px;
+        line-height:1.6; display:none; }
+ .msg.show { display:block; }
+ .msg.info { background:#e4f0fb; color:#13497a; }
+ .msg.ok   { background:#d8f5e0; color:#116b33; }
+ .msg.err  { background:#fde2e4; color:#9b1c25; }
+ .msg.warn { background:#fff3cd; color:#8a6100; }
+ pre { background:#1e2630; color:#e8edf2; padding:12px; border-radius:6px;
+       overflow-x:auto; font-size:12.5px; margin:10px 0 0; white-space:pre-wrap;
+       word-break:break-word; }
+ table.log { width:100%; border-collapse:collapse; font-size:13px; }
+ table.log th, table.log td { border-bottom:1px solid var(--line);
+                              padding:7px 9px; text-align:left; }
+ table.log th { background:#eef2f6; }
+ h2 { font-size:15px; margin:0 0 10px; }
+ code { background:#eef2f6; padding:1px 5px; border-radius:4px; font-size:13px; }
+ a { color:#13497a; }
+ .tools p { font-size:14px; line-height:1.8; margin:0; }
+ @media (max-width:640px) { .grid { grid-template-columns:1fr; }
+                            button { width:100%; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>เพิ่มข้อมูลเข้า SharePoint List — DemoApp</h1>
+  <p id="target">กำลังตรวจสอบการเชื่อมต่อ… <span id="badge" class="badge warn">…</span></p>
+</header>
+
+<div class="wrap">
+  <div id="msg" class="msg"></div>
+
+  <form id="form" class="card" autocomplete="off">
+    <div id="fields" class="grid"></div>
+    <div class="actions">
+      <button type="button" id="btnUpsert">บันทึกเข้า SharePoint (Upsert)</button>
+      <button type="button" id="btnInsert" class="sec">สร้างรายการใหม่เสมอ</button>
+      <button type="button" id="btnCheck"  class="sec">ตรวจสอบอย่างเดียว</button>
+      <button type="reset"  id="btnReset"  class="sec">ล้างฟอร์ม</button>
+    </div>
+  </form>
+
+  <div class="card tools">
+    <h2>เครื่องมือทดสอบ</h2>
+    <p>
+      <a href="/api/health" target="_blank">/api/health</a> — ตรวจสถานะการเชื่อมต่อ<br>
+      <a href="/api/schema" target="_blank">/api/schema</a> — ดูคอลัมน์ที่เขียนได้จริง (internal name)<br>
+      ส่งเป็นชุดจากไฟล์:
+      <code>python scripts/sp_upload.py --input data/upload.csv --key-column Customer_id</code>
+    </p>
+    <div id="logBox" style="display:none">
+      <h2 style="margin-top:22px">ประวัติการส่ง (รอบนี้)</h2>
+      <table class="log">
+        <thead><tr><th>เวลา</th><th>การทำงาน</th><th>Customer_id</th><th>ผลลัพธ์</th></tr></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ถ้าเปิดไฟล์ตรง ๆ (file://) ให้ชี้ API ไปที่ server ที่รันอยู่
+const API = location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+
+// โครงฟิลด์สำรอง — ใช้เมื่อเรียก /api/fields ไม่ได้ เพื่อให้ฟอร์มยังแสดงผลได้
+const FALLBACK_FIELDS = [
+  {key:"Title", label:"Title (เลขที่/ชื่อคำขอ)", type:"text", required:true,
+   placeholder:"Rungroj Chatch Limited Partnership..."},
+  {key:"Registered_Name", label:"Registered_Name (ชื่อจดทะเบียน)", type:"text",
+   required:true, placeholder:"Rungroj Chatchawal Limited Partnership"},
+  {key:"Customer_id", label:"Customer_id (รหัสลูกค้า)", type:"text", required:true,
+   placeholder:"101047587", help:"ใช้เป็น key สำหรับ upsert"},
+  {key:"Type1", label:"Type1 (ประเภทลูกค้า)", type:"select",
+   options:["","Existing","Lead","ค้าปลีก"]},
+  {key:"Status", label:"Status (สถานะ)", type:"select", required:true,
+   options:["","Draft","รอการพิจารณาเบื้องต้น","ผ่านการพิจารณาเบื้องต้น",
+            "ไม่ผ่านการพิจารณาเบื้องต้น","อนุมัติ-KYC","ไม่อนุมัติ"]},
+  {key:"Type_Request", label:"Type_Request (ประเภทคำขอ)", type:"select",
+   options:["","คำขอเปิดวงเงินลูกค้าใหม่","เปิดวงเงินลูกค้าใหม่","คำขอเพิ่มวงเงิน",
+            "เพิ่มวงเงิน","C.ติดตามชุดเปิดตัวจริง"]},
+  {key:"business_type", label:"business_type (ประเภทธุรกิจ)", type:"select",
+   options:["","รับเหมาก่อสร้าง","รับเหมาก่อสร้าง(เพิ่ม)","ร้านค้าช่วง","อสังหาริมทรัพย์",
+            "อสังหาริมทรัพย์(เพิ่ม)","หน่วยงานราชการ","อื่นๆ","อื่นๆ(เพิ่ม)"]},
+  {key:"Customer Name", label:"Customer Name (ชื่อลูกค้า)", type:"text"},
+  {key:"type_teams", label:"type_teams (ทีม)", type:"select",
+   options:["","Store Operation","Wholesales (WS)","Project Sales (PS)","Retail",
+            "Steel Key Account","Key Account","ค้าปลีก","ตะวันตก","ผู้แทนขาย"]},
+  {key:"branch", label:"branch (สาขา)", type:"text"},
+  {key:"Owner", label:"Owner (ผู้รับผิดชอบ)", type:"text", placeholder:"name@dohome.co.th"},
+  {key:"registration_number", label:"registration_number (เลขทะเบียน)", type:"text"},
+  {key:"Estimated_annual_income", label:"Estimated_annual_income (รายได้ต่อปี)",
+   type:"select", options:["","10 - 50 ล้านบาท","มากกว่า 50 ล้านบาท"]},
+  {key:"limit", label:"limit (วงเงินที่ขอ)", type:"text", placeholder:"1000000",
+   help:"ระบบจะตัดเครื่องหมาย , ให้อัตโนมัติ"},
+  {key:"province", label:"province (จังหวัด)", type:"text"},
+  {key:"district", label:"district (อำเภอ/เขต)", type:"text"},
+  {key:"telephone", label:"telephone (โทรศัพท์)", type:"text"},
+  {key:"contact_name", label:"contact_name (ผู้ติดต่อ)", type:"text"},
+  {key:"contact_number", label:"contact_number (เบอร์ผู้ติดต่อ)", type:"text"}
+];
+
+let FIELDS = [];
+const $ = (id) => document.getElementById(id);
+
+function esc(s){ return String(s==null?"":s)
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+function showMsg(html, level){
+  const m = $("msg");
+  m.className = "msg show " + (level||"info");
+  m.innerHTML = html;
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function renderFields(list){
+  FIELDS = list;
+  $("fields").innerHTML = list.map(f => {
+    const star = f.required ? ' <span class="req">*</span>' : "";
+    const help = f.help ? `<small>${esc(f.help)}</small>` : "";
+    let ctl;
+    if (f.type === "select") {
+      ctl = `<select name="${esc(f.key)}" id="f_${esc(f.key)}">` +
+        (f.options||[]).map(o =>
+          `<option value="${esc(o)}">${o ? esc(o) : "— เลือก —"}</option>`).join("") +
+        `</select>`;
+    } else {
+      ctl = `<input type="text" name="${esc(f.key)}" id="f_${esc(f.key)}" ` +
+            `placeholder="${esc(f.placeholder||"")}">`;
+    }
+    return `<div class="field"><label for="f_${esc(f.key)}">${esc(f.label)}${star}</label>${ctl}${help}</div>`;
+  }).join("");
+}
+
+function collect(){
+  const data = {};
+  FIELDS.forEach(f => {
+    const el = document.getElementById("f_" + f.key);
+    if (el && el.value.trim() !== "") data[f.key] = el.value.trim();
+  });
+  return data;
+}
+
+function addLog(action, customer, result, cls){
+  $("logBox").style.display = "block";
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td>${esc(new Date().toLocaleTimeString())}</td><td>${esc(action)}</td>` +
+                 `<td>${esc(customer||"")}</td><td class="${cls}">${esc(result)}</td>`;
+  $("logBody").prepend(tr);
+}
+
+async function health(){
+  try {
+    const r = await fetch(API + "/api/health");
+    const h = await r.json();
+    $("target").innerHTML =
+      `https://${esc(h.hostname)}${esc(h.site_path)} / ${esc(h.list_name)} &nbsp; ` +
+      (h.dry_run ? '<span class="badge warn">DRY-RUN — ไม่เขียนจริง</span>'
+       : h.connected ? '<span class="badge ok">เชื่อมต่อ SharePoint แล้ว</span>'
+                     : '<span class="badge err">ยังไม่ได้เชื่อมต่อ</span>');
+    if (h.error) showMsg(esc(h.error), "warn");
+  } catch (e) {
+    $("target").innerHTML = 'ติดต่อ server ไม่ได้ <span class="badge err">offline</span>';
+    showMsg("เรียก API ไม่ได้ — ต้องเปิดหน้านี้ผ่าน <code>python webapp/server.py</code> " +
+            "ที่ <a href='http://127.0.0.1:8000'>http://127.0.0.1:8000</a> " +
+            "ไม่ใช่เปิดไฟล์ index.html ตรง ๆ", "err");
+  }
+}
+
+async function loadFields(){
+  try {
+    const r = await fetch(API + "/api/fields");
+    if (!r.ok) throw new Error("http " + r.status);
+    renderFields(await r.json());
+  } catch (e) {
+    renderFields(FALLBACK_FIELDS);
+  }
+}
+
+async function submit(mode){
+  const data = collect();
+  const missing = FIELDS.filter(f => f.required && !data[f.key]).map(f => f.label);
+  if (missing.length) {
+    showMsg("กรอกข้อมูลไม่ครบ: " + missing.map(esc).join(", "), "err");
+    return;
+  }
+  const btns = ["btnUpsert","btnInsert","btnCheck"].map($);
+  btns.forEach(b => b.disabled = true);
+  try {
+    const r = await fetch(API + "/api/submit", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({mode: mode, fields: data})
+    });
+    const res = await r.json();
+    const payload = res.payload ? `<pre>${esc(JSON.stringify(res.payload, null, 2))}</pre>` : "";
+    const note = (res.ignored && res.ignored.length)
+      ? `<br>คอลัมน์ที่ลิสต์ไม่มีหรือเขียนไม่ได้ (ข้าม): ${esc(res.ignored.join(", "))}` : "";
+
+    if (res.status === "created" || res.status === "updated") {
+      const verb = res.status === "created" ? "สร้าง" : "อัปเดต";
+      showMsg(`${verb}รายการสำเร็จ — item ID <b>${esc(res.item_id)}</b> ` +
+              `&nbsp;<a href="${esc(res.link)}" target="_blank">เปิดใน SharePoint</a>${note}`, "ok");
+      addLog(mode, data["Customer_id"], `${verb}สำเร็จ (ID ${res.item_id})`, "ok");
+      $("form").reset();
+    } else if (res.status === "validated") {
+      showMsg(`ตรวจสอบผ่าน — ข้อมูลที่จะส่ง ${res.field_count} ฟิลด์:${note}${payload}`, "info");
+    } else if (res.status === "dry_run") {
+      showMsg(`<b>DRY-RUN</b> — ไม่ได้เขียนลง SharePoint จริง ` +
+              `(${res.field_count} ฟิลด์):${note}${payload}`, "warn");
+      addLog(mode + " (dry-run)", data["Customer_id"], "จำลอง — ไม่เขียนจริง", "warn");
+    } else {
+      showMsg(`บันทึกไม่สำเร็จ — ${esc(res.message||"ไม่ทราบสาเหตุ")}` +
+              (res.detail ? `<pre>${esc(res.detail)}</pre>` : ""), "err");
+      addLog(mode, data["Customer_id"], res.message || "ผิดพลาด", "err");
+    }
+  } catch (e) {
+    showMsg("ส่งข้อมูลไม่สำเร็จ: " + esc(e.message) +
+            " — ตรวจว่า server ยังทำงานอยู่หรือไม่", "err");
+  } finally {
+    btns.forEach(b => b.disabled = false);
+  }
+}
+
+$("btnUpsert").onclick = () => submit("upsert");
+$("btnInsert").onclick = () => submit("insert");
+$("btnCheck").onclick  = () => submit("validate");
+
+loadFields().then(health);
+</script>
+</body>
+</html>
