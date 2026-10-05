@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เพิ่มข้อมูล — SharePoint DemoApp</title>
+<style>
+ :root { --dh:#e4002b; --bg:#f4f6f8; --line:#d8dee4; }
+ * { box-sizing:border-box; }
+ body { margin:0; background:var(--bg); color:#16202a;
+        font-family:"Segoe UI",system-ui,"Noto Sans Thai",sans-serif; }
+ header { background:var(--dh); color:#fff; padding:18px 24px; }
+ header h1 { margin:0; font-size:19px; }
+ header p { margin:6px 0 0; font-size:13px; opacity:.92; }
+ .wrap { max-width:1000px; margin:22px auto; padding:0 16px 48px; }
+ .card { background:#fff; border:1px solid var(--line); border-radius:10px;
+          padding:22px; margin-bottom:18px; }
+ .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:14px; }
+ .field { display:flex; flex-direction:column; }
+ label { font-size:13px; font-weight:600; margin-bottom:5px; }
+ input,select { padding:9px 10px; border:1px solid var(--line); border-radius:6px;
+                 font-size:14px; background:#fff; font-family:inherit; }
+ input:focus,select:focus { outline:2px solid var(--dh); outline-offset:-1px; }
+ small { color:#5b6b7b; font-size:12px; margin-top:4px; }
+ .req { color:var(--dh); }
+ .actions { margin-top:20px; display:flex; gap:10px; flex-wrap:wrap; }
+ button { background:var(--dh); color:#fff; border:0; border-radius:6px;
+           padding:11px 22px; font-size:14px; font-weight:600; cursor:pointer;
+           font-family:inherit; }
+ button.sec { background:#5b6b7b; }
+ .badge { display:inline-block; padding:3px 10px; border-radius:11px;
+           font-size:12px; font-weight:600; }
+ .ok { background:#d8f5e0; color:#116b33; }
+ .warn { background:#fff3cd; color:#8a6100; }
+ .err { background:#fde2e4; color:#9b1c25; }
+ .msg { padding:12px 14px; border-radius:7px; margin-bottom:16px; font-size:14px;
+         line-height:1.55; }
+ .msg.info { background:#e4f0fb; color:#13497a; }
+ .msg.ok { background:#d8f5e0; color:#116b33; }
+ .msg.err { background:#fde2e4; color:#9b1c25; }
+ .msg.warn { background:#fff3cd; color:#8a6100; }
+ pre { background:#1e2630; color:#e8edf2; padding:12px; border-radius:6px;
+        overflow-x:auto; font-size:12.5px; }
+ table.log { width:100%; border-collapse:collapse; font-size:13px; }
+ table.log th,table.log td { border-bottom:1px solid var(--line);
+                              padding:7px 9px; text-align:left; }
+ table.log th { background:#eef2f6; }
+ h2 { font-size:15px; margin:22px 0 10px; }
+ code { background:#eef2f6; padding:1px 5px; border-radius:4px; font-size:13px; }
+ @media (max-width:640px) { .grid { grid-template-columns:1fr; }
+                             button { width:100%; } }
+</style></head><body>
+<header>
+  <h1>เพิ่มข้อมูลเข้า SharePoint List — DemoApp</h1>
+  <p>https://dohomegroup.sharepoint.com/sites/AC-Accounting / DemoApp &nbsp; <span class="badge ok">เชื่อมต่อ SharePoint แล้ว</span></p>
+</header>
+<div class="wrap">
+  
+  <form method="post" action="/submit" class="card">
+    <div class="grid"><div class="field"><label for="Title">Title (เลขที่/ชื่อคำขอ) <span class="req">*</span></label><input type="text" name="Title" id="Title" value="" placeholder="Rungroj Chatch Limited Partnership..." required></div><div class="field"><label for="Registered_Name">Registered_Name (ชื่อจดทะเบียน) <span class="req">*</span></label><input type="text" name="Registered_Name" id="Registered_Name" value="" placeholder="Rungroj Chatchawal Limited Partnership" required></div><div class="field"><label for="Customer_id">Customer_id (รหัสลูกค้า) <span class="req">*</span></label><input type="text" name="Customer_id" id="Customer_id" value="" placeholder="101047587" required><small>ใช้เป็น key สำหรับ upsert — ถ้ามีอยู่แล้วจะอัปเดตรายการเดิม</small></div><div class="field"><label for="Type1">Type1 (ประเภทลูกค้า)</label><select name="Type1" id="Type1"><option value="" selected>— เลือก —</option><option value="Existing">Existing</option><option value="Lead">Lead</option><option value="ค้าปลีก">ค้าปลีก</option></select></div><div class="field"><label for="Status">Status (สถานะ) <span class="req">*</span></label><select name="Status" id="Status" required><option value="" selected>— เลือก —</option><option value="Draft">Draft</option><option value="รอการพิจารณาเบื้องต้น">รอการพิจารณาเบื้องต้น</option><option value="ผ่านการพิจารณาเบื้องต้น">ผ่านการพิจารณาเบื้องต้น</option><option value="ไม่ผ่านการพิจารณาเบื้องต้น">ไม่ผ่านการพิจารณาเบื้องต้น</option><option value="อนุมัติ-KYC">อนุมัติ-KYC</option><option value="ไม่อนุมัติ">ไม่อนุมัติ</option></select></div><div class="field"><label for="Type_Request">Type_Request (ประเภทคำขอ)</label><select name="Type_Request" id="Type_Request"><option value="" selected>— เลือก —</option><option value="คำขอเปิดวงเงินลูกค้าใหม่">คำขอเปิดวงเงินลูกค้าใหม่</option><option value="เปิดวงเงินลูกค้าใหม่">เปิดวงเงินลูกค้าใหม่</option><option value="คำขอเพิ่มวงเงิน">คำขอเพิ่มวงเงิน</option><option value="เพิ่มวงเงิน">เพิ่มวงเงิน</option><option value="C.ติดตามชุดเปิดตัวจริง">C.ติดตามชุดเปิดตัวจริง</option></select></div><div class="field"><label for="business_type">business_type (ประเภทธุรกิจ)</label><select name="business_type" id="business_type"><option value="" selected>— เลือก —</option><option value="รับเหมาก่อสร้าง">รับเหมาก่อสร้าง</option><option value="รับเหมาก่อสร้าง(เพิ่ม)">รับเหมาก่อสร้าง(เพิ่ม)</option><option value="ร้านค้าช่วง">ร้านค้าช่วง</option><option value="อสังหาริมทรัพย์">อสังหาริมทรัพย์</option><option value="อสังหาริมทรัพย์(เพิ่ม)">อสังหาริมทรัพย์(เพิ่ม)</option><option value="หน่วยงานราชการ">หน่วยงานราชการ</option><option value="อื่นๆ">อื่นๆ</option><option value="อื่นๆ(เพิ่ม)">อื่นๆ(เพิ่ม)</option></select></div><div class="field"><label for="Customer Name">Customer Name (ชื่อลูกค้า)</label><input type="text" name="Customer Name" id="Customer Name" value="" placeholder=""></div><div class="field"><label for="type_teams">type_teams (ทีม)</label><select name="type_teams" id="type_teams"><option value="" selected>— เลือก —</option><option value="Store Operation">Store Operation</option><option value="Wholesales (WS)">Wholesales (WS)</option><option value="Project Sales (PS)">Project Sales (PS)</option><option value="Retail">Retail</option><option value="Steel Key Account">Steel Key Account</option><option value="Key Account">Key Account</option><option value="ค้าปลีก">ค้าปลีก</option><option value="ตะวันตก">ตะวันตก</option><option value="ผู้แทนขาย">ผู้แทนขาย</option></select></div><div class="field"><label for="branch">branch (สาขา)</label><input type="text" name="branch" id="branch" value="" placeholder=""></div><div class="field"><label for="Owner">Owner (ผู้รับผิดชอบ)</label><input type="text" name="Owner" id="Owner" value="" placeholder="name@dohome.co.th"></div><div class="field"><label for="registration_number">registration_number (เลขทะเบียน)</label><input type="text" name="registration_number" id="registration_number" value="" placeholder=""></div><div class="field"><label for="Estimated_annual_income">Estimated_annual_income (รายได้ต่อปี)</label><select name="Estimated_annual_income" id="Estimated_annual_income"><option value="" selected>— เลือก —</option><option value="10 - 50 ล้านบาท">10 - 50 ล้านบาท</option><option value="มากกว่า 50 ล้านบาท">มากกว่า 50 ล้านบาท</option></select></div><div class="field"><label for="limit">limit (วงเงินที่ขอ)</label><input type="text" name="limit" id="limit" value="" placeholder="1000000"><small>คอลัมน์นี้เป็น Text ในลิสต์ — ระบบจะตัดเครื่องหมาย , ให้อัตโนมัติ</small></div><div class="field"><label for="province">province (จังหวัด)</label><input type="text" name="province" id="province" value="" placeholder=""></div><div class="field"><label for="district">district (อำเภอ/เขต)</label><input type="text" name="district" id="district" value="" placeholder=""></div><div class="field"><label for="telephone">telephone (โทรศัพท์)</label><input type="text" name="telephone" id="telephone" value="" placeholder=""></div><div class="field"><label for="contact_name">contact_name (ผู้ติดต่อ)</label><input type="text" name="contact_name" id="contact_name" value="" placeholder=""></div><div class="field"><label for="contact_number">contact_number (เบอร์ผู้ติดต่อ)</label><input type="text" name="contact_number" id="contact_number" value="" placeholder=""></div></div>
+    <div class="actions">
+      <button type="submit" name="mode" value="upsert">บันทึกเข้า SharePoint (Upsert)</button>
+      <button type="submit" name="mode" value="insert" class="sec">สร้างรายการใหม่เสมอ</button>
+      <button type="submit" name="mode" value="validate" class="sec">ตรวจสอบอย่างเดียว</button>
+    </div>
+  </form>
+  <div class="card">
+    <h2 style="margin-top:0">เครื่องมือทดสอบ</h2>
+    <p style="font-size:14px;line-height:1.7;margin:0">
+      <a href="/api/health">/api/health</a> — ตรวจสถานะการเชื่อมต่อ<br>
+      <a href="/api/schema">/api/schema</a> — ดูคอลัมน์ที่เขียนได้จริง (internal name)<br>
+      ส่งเป็นชุดจากไฟล์: <code>python scripts/sp_upload.py --input data/upload.csv
+      --key-column Customer_id</code>
+    </p>
+    
+  </div>
+</div></body></html>
