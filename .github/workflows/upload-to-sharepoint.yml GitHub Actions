@@ -1,0 +1,91 @@
+name: Upload to SharePoint (DemoApp)
+
+on:
+  workflow_dispatch:
+    inputs:
+      input_file:
+        description: "Path to the CSV/JSON file to upload"
+        required: true
+        default: "data/upload.csv"
+      mode:
+        description: "insert = always create, upsert = update when the key matches"
+        required: true
+        default: "upsert"
+        type: choice
+        options: [upsert, insert]
+      key_column:
+        description: "Column used to match existing items (upsert only)"
+        required: false
+        default: "Customer_id"
+      dry_run:
+        description: "Validate only, do not write"
+        required: true
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+  push:
+    branches: [main]
+    paths:
+      - "data/**"
+      - "scripts/sp_upload.py"
+      - "config/field_map.json"
+  schedule:
+    - cron: "0 1 * * *"   # 08:00 Asia/Bangkok daily
+
+concurrency:
+  group: sharepoint-upload
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    environment: sharepoint          # optional: add approvals/protection here
+    env:
+      # --- secrets (Settings > Secrets and variables > Actions > Secrets) ---
+      AZ_CLIENT_ID: ${{ secrets.AZ_CLIENT_ID }}
+      AZ_TENANT_ID: ${{ secrets.AZ_TENANT_ID }}
+      AZ_CLIENT_SECRET: ${{ secrets.AZ_CLIENT_SECRET }}
+      # legacy names — the script picks whichever one has a value
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      # --- variables (Settings > Secrets and variables > Actions > Variables) ---
+      SP_HOSTNAME: ${{ vars.SP_HOSTNAME || 'dohomegroup.sharepoint.com' }}
+      SP_SITE_PATH: ${{ vars.SP_SITE_PATH || '/sites/AC-Accounting' }}
+      SP_LIST_NAME: ${{ vars.SP_LIST_NAME || 'DemoApp' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Preflight — credential presence (no values printed)
+        run: |
+          for n in AZ_CLIENT_ID AZ_TENANT_ID AZ_CLIENT_SECRET AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_CLIENT_SECRET; do
+            if [ -n "${!n}" ]; then echo "$n: present"; else echo "$n: empty"; fi
+          done
+          if [ -z "$AZ_CLIENT_SECRET" ] && [ -z "$AZURE_CLIENT_SECRET" ]; then
+            echo "::error::No client secret configured. Add AZ_CLIENT_SECRET in repository secrets."
+            exit 1
+          fi
+
+      - name: Show list schema
+        run: python scripts/sp_upload.py --show-schema
+
+      - name: Upload rows
+        run: |
+          python scripts/sp_upload.py \
+            --input "${{ github.event.inputs.input_file || 'data/upload.csv' }}" \
+            --mode "${{ github.event.inputs.mode || 'upsert' }}" \
+            --key-column "${{ github.event.inputs.key_column || 'Customer_id' }}" \
+            --batch-sleep 0.2 \
+            ${{ (github.event.inputs.dry_run == 'true') && '--dry-run' || '' }}
